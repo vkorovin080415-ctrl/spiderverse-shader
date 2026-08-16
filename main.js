@@ -68,10 +68,10 @@ async function init() {
 
             // Impasto Brush Engine
             uEnableImpasto: { value: 1.0 },
-            uBrushScale: { value: 12.0 },
+            uBrushScale: { value: 18.0 },
             uImpastoHeight: { value: 0.35 },
-            uImpastoStrength: { value: 0.95 },
-            uBristleDensity: { value: 0.1 },
+            uImpastoStrength: { value: 0.35 },
+            uBristleDensity: { value: 0.5 },
 
             // Ben-Day Dots Engine
             uEnableBenDay: { value: 1.0 },
@@ -85,15 +85,15 @@ async function init() {
             uEnableGlitch: { value: 0.0 },
             uGlitchIntensity: { value: 0.5 },
             uEnableRimLight: { value: 1.0 },
-            uRimStrength: { value: 1.0 },
+            uRimStrength: { value: 0.5 },
             uRimWidth: { value: 0.2 },
             uRimColorMode: { value: 1.0 },
 
             // Graffiti Emission Shader
             uEnableGraffiti: { value: 1.0 },
-            uGraffitiScale: { value: 10.0 },
-            uGraffitiThreshold: { value: 0.3 },
-            uGraffitiGlow: { value: 1.5 },
+            uGraffitiScale: { value: 4.0 },
+            uGraffitiThreshold: { value: 0.6 },
+            uGraffitiGlow: { value: 2.5 },
             uGraffitiColor: { value: new THREE.Color(0x00f0ff) },
             uGraffitiExtrude: { value: 0.05 }
         },
@@ -150,51 +150,85 @@ async function init() {
     });
 
     // ============================================================================
-    // 4. MODEL LOADING & CENTERING
+    // 4. MODEL LOADING, CENTERING & CUSTOM GLB FILE HANDLER
     // ============================================================================
 
     const loader = new GLTFLoader();
+    let currentModel = null;
+
+    function setupAndAddModel(model) {
+        if (currentModel) {
+            scene.remove(currentModel);
+        }
+
+        model.traverse((child) => {
+            if (child.isMesh) {
+                if (child.material && child.material.map) {
+                    spiderVerseMaterial.uniforms.uBaseTexture.value = child.material.map;
+                    spiderVerseMaterial.uniforms.uHasTexture.value = 1.0;
+                } else {
+                    spiderVerseMaterial.uniforms.uHasTexture.value = 0.0;
+                }
+                child.material = spiderVerseMaterial;
+            }
+        });
+
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        model.position.sub(center);
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = camera.fov * (Math.PI / 180);
+        let cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.5;
+
+        camera.position.set(0, 0, cameraZ);
+        camera.lookAt(0, 0, 0);
+
+        initialCameraPos.copy(camera.position);
+        initialTargetPos.set(0, 0, 0);
+        controls.target.copy(initialTargetPos);
+        controls.update();
+
+        scene.add(model);
+        currentModel = model;
+        startIdleTimer();
+    }
+
+    // Load default model.glb on startup
     loader.load(
         'model.glb',
         (gltf) => {
-            const model = gltf.scene;
-
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    if (child.material && child.material.map) {
-                        spiderVerseMaterial.uniforms.uBaseTexture.value = child.material.map;
-                        spiderVerseMaterial.uniforms.uHasTexture.value = 1.0;
-                    }
-                    child.material = spiderVerseMaterial;
-                }
-            });
-
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            model.position.sub(center);
-
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.5;
-
-            camera.position.set(0, 0, cameraZ);
-            camera.lookAt(0, 0, 0);
-
-            // Store initial camera/target state for smooth fallback
-            initialCameraPos.copy(camera.position);
-            initialTargetPos.set(0, 0, 0);
-            controls.target.copy(initialTargetPos);
-            controls.update();
-
-            scene.add(model);
-            startIdleTimer();
+            setupAndAddModel(gltf.scene);
         },
         undefined,
         (error) => {
-            console.error('An error occurred loading model.glb:', error);
+            console.warn('Default model.glb not found or failed to load. Use the custom file picker in the HUD to load a .glb/.gltf file.');
         }
     );
+
+    // Custom File Upload Input Handler
+    const fileInput = document.getElementById('glb-file-input');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            loader.load(
+                url,
+                (gltf) => {
+                    setupAndAddModel(gltf.scene);
+                    URL.revokeObjectURL(url);
+                },
+                undefined,
+                (err) => {
+                    console.error('Failed to parse uploaded custom GLB file:', err);
+                    URL.revokeObjectURL(url);
+                }
+            );
+        });
+    }
 
     // ============================================================================
     // 5. UI HUD BINDINGS
@@ -355,7 +389,6 @@ async function init() {
 
         // Buttery-smooth exponential ease-out fallback glide
         if (isReturningToHome && !isUserInteracting) {
-            // Lower base (0.0002) creates a luxurious, seamless glide curve
             const lerpFactor = 1.0 - Math.pow(0.0002, deltaTime);
 
             camera.position.lerp(initialCameraPos, lerpFactor);

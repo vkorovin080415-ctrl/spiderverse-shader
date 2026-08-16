@@ -19,16 +19,22 @@
             left: 15px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
+            /* Permanently solid background and high opacity on desktop (NO FADE) */
             background: rgba(13, 8, 20, 0.88);
-            padding: 12px;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            padding: 10px;
             border: 1.5px solid #ff0055;
             box-shadow: 2px 2px 0px #00f0ff;
             border-radius: 3px;
             z-index: 100;
-            max-height: 90vh;
+            max-height: 85vh;
             overflow-y: auto;
-            width: 260px;
+            width: 250px;
+            opacity: 0.92;
+            transition: none;
+            /* Zero transition on desktop so it never fades */
         }
 
         .hud-group {
@@ -117,6 +123,62 @@
             text-shadow: 1px 1px 0px #000;
         }
 
+        /* Custom File Upload Styling */
+        .file-upload-label {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: #ff0055;
+            color: #fff;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 5px 0;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: 1px solid #00f0ff;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .file-upload-label:hover {
+            background: #00f0ff;
+            color: #0d0814;
+        }
+
+        #glb-file-input {
+            display: none;
+        }
+
+        /* Mobile Viewport Optimizations (Keeps slow, smooth fade-away ONLY on touch devices) */
+        @media (max-width: 600px) {
+            #hud-container {
+                width: 210px;
+                max-height: 75vh;
+                top: 10px;
+                left: 10px;
+                padding: 8px;
+                opacity: 0.25;
+                /* Fades out when idle on mobile */
+                background: rgba(13, 8, 20, 0.35);
+                border: 1.5px solid rgba(255, 0, 85, 0.6);
+                box-shadow: 2px 2px 0px rgba(0, 240, 255, 0.4);
+                /* Slow, butter-smooth 0.8s transition exclusively on mobile */
+                transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    background 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            #hud-container:hover,
+            #hud-container:focus-within,
+            #hud-container:active {
+                opacity: 0.92;
+                background: rgba(13, 8, 20, 0.88);
+                border-color: #ff0055;
+                box-shadow: 2px 2px 0px #00f0ff;
+            }
+        }
+
         /* Scrollbar Styling */
         #hud-container::-webkit-scrollbar {
             width: 4px;
@@ -138,6 +200,15 @@
 
 <body>
     <div id="hud-container">
+
+        <!-- 0. Model Source -->
+        <fieldset class="hud-group">
+            <legend>Model Source</legend>
+            <div class="hud-toggle full-width">
+                <label for="glb-file-input" class="file-upload-label">Load Custom .GLB / .GLTF</label>
+                <input type="file" id="glb-file-input" accept=".glb,.gltf">
+            </div>
+        </fieldset>
 
         <!-- 1. Lighting Setup -->
         <fieldset class="hud-group">
