@@ -1,0 +1,135 @@
+uniform sampler2D tDiffuse;
+uniform float uTime;
+uniform float uEnableGlitch;
+uniform float uGlitchIntensity;
+uniform float uGraffitiGlow;
+
+varying vec2 vUv;
+
+#define GOLDEN_ANGLE 2.39996323
+#define NUM_SAMPLES 32
+
+float glowHash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// 2D Box Signed Distance Field
+float sdBox(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// ============================================================================
+// GOAL 4: 3D-SURFACE CONSTRAINED THIN GLITCH SLICES (NO BORDERS)
+// ============================================================================
+
+vec3 evaluateGlitchRectangles(sampler2D tex, vec2 uv, float intensity, float time) {
+    vec3 originalColor = texture2D(tex, uv).rgb;
+    if (intensity <= 0.01) return originalColor;
+
+    vec2 distortedUv = uv;
+    float activeChromaticOffset = 0.0;
+
+    for (int i = 0; i < 3; i++) {
+        float id = float(i) + 1.0;
+
+        // Jump interval
+        float jumpRate = 6.0 + id * 2.5; 
+        float timeStep = floor(time * jumpRate);
+
+        // Jump position targeted toward model silhouette center region
+        vec2 boxCenter = vec2(
+            0.35 + 0.30 * glowHash12(vec2(timeStep, id * 17.13)),
+            0.20 + 0.60 * glowHash12(vec2(timeStep, id * 43.71))
+        );
+
+        // Thin vertical slice proportions
+        vec2 boxSize = vec2(
+            (0.015 + 0.025 * glowHash12(vec2(timeStep, id * 71.19))),
+            (0.12  + 0.150 * glowHash12(vec2(timeStep, id * 91.33)))
+        ) * intensity;
+
+        // Signed distance to slice
+        vec2 localUv = uv - boxCenter;
+        float dist = sdBox(localUv, boxSize);
+
+        if (dist < 0.0) {
+            // Check if current pixel actually hits the 3D model surface
+            vec3 modelSample = texture2D(tex, uv).rgb;
+            float isModelSurface = step(0.02, length(modelSample));
+
+            if (isModelSurface > 0.5) {
+                // Horizontal displacement & magnification along the mesh
+                float zoomFactor = 1.45 + 0.35 * glowHash12(vec2(timeStep, id));
+                float shiftX = (glowHash12(vec2(timeStep, id * 3.0)) - 0.5) * 0.06 * intensity;
+                distortedUv = vec2(boxCenter.x + localUv.x / zoomFactor + shiftX, uv.y);
+
+                // Chromatic channel splitting inside the slice
+                activeChromaticOffset += 0.022 * intensity * (1.0 + 0.3 * id);
+            }
+        }
+    }
+
+    // Sample texture with horizontal RGB channel split
+    if (activeChromaticOffset > 0.0001) {
+        vec2 dir = vec2(1.0, 0.0);
+        vec3 col;
+        col.r = texture2D(tex, distortedUv + dir * activeChromaticOffset).r;
+        col.g = texture2D(tex, distortedUv).g;
+        col.b = texture2D(tex, distortedUv - dir * activeChromaticOffset).b;
+        return col;
+    }
+
+    return texture2D(tex, distortedUv).rgb;
+}
+
+// ============================================================================
+// GOAL 3: DYNAMIC ANIMATED POISSON RADIAL GLOW
+// ============================================================================
+
+vec3 evaluateSmoothHalo(sampler2D tex, vec2 uv, float glowAmount, float time) {
+    vec3 baseColor = texture2D(tex, uv).rgb;
+    if (glowAmount <= 0.01) return baseColor;
+
+    vec3 bloomAcc = vec3(0.0);
+    float totalWeight = 0.0;
+
+    // Temporal jitter re-enabled for lively moving halo
+    float randomJitter = glowHash12(uv * 1000.0 + fract(time));
+    float radius = 0.025 * (glowAmount * 0.5);
+
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+        float fi = float(i) + randomJitter;
+        float r = sqrt(fi / float(NUM_SAMPLES)) * radius;
+        float theta = fi * GOLDEN_ANGLE;
+
+        vec2 sampleOffset = vec2(cos(theta), sin(theta)) * r;
+        vec3 sampleColor = texture2D(tex, uv + sampleOffset).rgb;
+
+        float luminance = max(sampleColor.r, max(sampleColor.g, sampleColor.b));
+        float thresholdMask = smoothstep(0.65, 1.2, luminance);
+        float weight = exp(-3.0 * (r / radius) * (r / radius));
+
+        bloomAcc += sampleColor * thresholdMask * weight;
+        totalWeight += weight;
+    }
+
+    bloomAcc /= max(totalWeight, 0.0001);
+    return baseColor + bloomAcc * glowAmount * 1.5;
+}
+
+void main() {
+    vec2 uv = vUv;
+
+    // 1. Evaluate discrete jumping glitch magnifiers
+    vec3 color = (uEnableGlitch > 0.5) 
+        ? evaluateGlitchRectangles(tDiffuse, uv, uGlitchIntensity, uTime)
+        : texture2D(tDiffuse, uv).rgb;
+
+    // 2. Composite dynamic animated halo
+    vec3 finalColor = evaluateSmoothHalo(tDiffuse, uv, uGraffitiGlow, uTime);
+
+    gl_FragColor = vec4(color + (finalColor - texture2D(tDiffuse, uv).rgb), 1.0);
+}

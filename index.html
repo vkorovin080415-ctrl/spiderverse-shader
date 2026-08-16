@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider-Verse Metro Boomin Shader</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0d0814;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #hud-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(13, 8, 20, 0.88);
+            padding: 12px;
+            border: 1.5px solid #ff0055;
+            box-shadow: 2px 2px 0px #00f0ff;
+            border-radius: 3px;
+            z-index: 100;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 260px;
+        }
+
+        .hud-group {
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 2px;
+            padding: 6px 8px;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px 8px;
+        }
+
+        .hud-group legend {
+            color: #00f0ff;
+            font-size: 9px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 0 4px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .hud-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #fff;
+            font-size: 9px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .hud-toggle.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .hud-toggle input[type="checkbox"] {
+            appearance: none;
+            width: 11px;
+            height: 11px;
+            border: 1.5px solid #00f0ff;
+            background: #0d0814;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .hud-toggle input[type="checkbox"]:checked {
+            background: #ff0055;
+            border-color: #ff0055;
+        }
+
+        .hud-toggle input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: #fff;
+            font-size: 8px;
+            top: -3px;
+            left: 1px;
+        }
+
+        .hud-toggle input[type="range"] {
+            appearance: none;
+            height: 3px;
+            width: 100%;
+            background: #00f0ff;
+            outline: none;
+            border-radius: 0;
+        }
+
+        .hud-toggle input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 7px;
+            height: 11px;
+            background: #ff0055;
+            border: 1px solid #fff;
+            cursor: pointer;
+        }
+
+        .hud-toggle label {
+            cursor: pointer;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        /* Scrollbar Styling */
+        #hud-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #hud-container::-webkit-scrollbar-thumb {
+            background: #ff0055;
+        }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+
+<body>
+    <div id="hud-container">
+
+        <!-- 1. Lighting Setup -->
+        <fieldset class="hud-group">
+            <legend>Lighting</legend>
+            <div class="hud-toggle">
+                <label for="slider-light-x">X</label>
+                <input type="range" id="slider-light-x" min="-1.0" max="1.0" value="0.5" step="0.05">
+            </div>
+            <div class="hud-toggle">
+                <label for="slider-light-y">Y</label>
+                <input type="range" id="slider-light-y" min="-1.0" max="1.0" value="0.8" step="0.05">
+            </div>
+            <div class="hud-toggle">
+                <label for="slider-light-z">Z</label>
+                <input type="range" id="slider-light-z" min="-1.0" max="1.0" value="1.0" step="0.05">
+            </div>
+            <div class="hud-toggle">
+                <label for="slider-light-strength">Pwr</label>
+                <input type="range" id="slider-light-strength" min="0.0" max="3.0" value="1.0" step="0.1">
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-light-softness">Softness</label>
+                <input type="range" id="slider-light-softness" min="0.01" max="1.0" value="0.1" step="0.01">
+            </div>
+        </fieldset>
+
+        <!-- 2. Impasto Painterly Engine -->
+        <fieldset class="hud-group">
+            <legend>Impasto Brush</legend>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-impasto" checked>
+                <label for="toggle-impasto">Enable Impasto</label>
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-brush-scale">Scale</label>
+                <input type="range" id="slider-brush-scale" min="5.0" max="50.0" value="18.0" step="1.0">
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-bristle-density">Bristles</label>
+                <input type="range" id="slider-bristle-density" min="0.0" max="1.0" value="0.5" step="0.05">
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-impasto-strength">Strength</label>
+                <input type="range" id="slider-impasto-strength" min="0.0" max="1.0" value="0.35" step="0.05">
+            </div>
+        </fieldset>
+
+        <!-- 3. Ben-Day Halftone Engine -->
+        <fieldset class="hud-group">
+            <legend>Ben-Day Dots</legend>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-benday" checked>
+                <label for="toggle-benday">Enable Ben-Day</label>
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-benday-scale">Dot Scale</label>
+                <input type="range" id="slider-benday-scale" min="10.0" max="300.0" value="120.0" step="5.0">
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-benday-strength">Strength</label>
+                <input type="range" id="slider-benday-strength" min="0.0" max="1.0" value="1.0" step="0.05">
+            </div>
+        </fieldset>
+
+        <!-- 4. Graffiti Tag Emissions -->
+        <fieldset class="hud-group">
+            <legend>Graffiti Tags</legend>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-graffiti" checked>
+                <label for="toggle-graffiti">Enable Graffiti</label>
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-graffiti-scale">Tag Scale</label>
+                <input type="range" id="slider-graffiti-scale" min="1.0" max="10.0" value="4.0" step="0.5">
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-graffiti-threshold">Density</label>
+                <input type="range" id="slider-graffiti-threshold" min="0.1" max="1.0" value="0.6" step="0.05">
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-graffiti-glow">Glow Power</label>
+                <input type="range" id="slider-graffiti-glow" min="0.5" max="5.0" value="2.5" step="0.2">
+            </div>
+        </fieldset>
+
+        <!-- 5. Stylistic & Post FX -->
+        <fieldset class="hud-group">
+            <legend>Rim Light & FX</legend>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-rimlight" checked>
+                <label for="toggle-rimlight">Rim Light</label>
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-rim-strength">Rim Strength</label>
+                <input type="range" id="slider-rim-strength" min="0.0" max="2.0" value="0.5" step="0.05">
+            </div>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-glitch">
+                <label for="toggle-glitch">Enable Glitch</label>
+            </div>
+        </fieldset>
+
+        <!-- 6. Geometry & Base Controls -->
+        <fieldset class="hud-group">
+            <legend>Base & Geometry</legend>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-base-color" checked>
+                <label for="toggle-base-color">Strip Colors</label>
+            </div>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-low-poly">
+                <label for="toggle-low-poly">Low-Poly Facets</label>
+            </div>
+            <div class="hud-toggle full-width">
+                <label for="slider-facet-steps">Facet Scale</label>
+                <input type="range" id="slider-facet-steps" min="2" max="32" value="12" step="1">
+            </div>
+            <div class="hud-toggle full-width">
+                <input type="checkbox" id="toggle-curvature">
+                <label for="toggle-curvature">Inspect Curvature</label>
+            </div>
+        </fieldset>
+
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>
