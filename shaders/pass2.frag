@@ -22,66 +22,67 @@ float sdBox(vec2 p, vec2 b) {
 }
 
 // ============================================================================
-// GOAL 4: 3 DISCRETE JUMPING GLITCH MAGNIFIERS
+// GOAL 4: 3D-SURFACE CONSTRAINED THIN GLITCH SLICES (NO BORDERS)
 // ============================================================================
 
 vec3 evaluateGlitchRectangles(sampler2D tex, vec2 uv, float intensity, float time) {
-    if (intensity <= 0.01) return texture2D(tex, uv).rgb;
+    vec3 originalColor = texture2D(tex, uv).rgb;
+    if (intensity <= 0.01) return originalColor;
 
     vec2 distortedUv = uv;
-    vec3 borderHighlight = vec3(0.0);
     float activeChromaticOffset = 0.0;
 
-    // Evaluate 3 distinct jumping glitch boxes
     for (int i = 0; i < 3; i++) {
         float id = float(i) + 1.0;
 
-        // Snap interval: jump every N frames using stepped time
-        float jumpRate = 8.0 + id * 2.0; // Jump speed per box
+        // Jump interval
+        float jumpRate = 6.0 + id * 2.5; 
         float timeStep = floor(time * jumpRate);
 
-        // Seed discrete screen position [0.25 to 0.75] per jump step
+        // Jump position targeted toward model silhouette center region
         vec2 boxCenter = vec2(
-            0.25 + 0.50 * glowHash12(vec2(timeStep, id * 17.13)),
-            0.25 + 0.50 * glowHash12(vec2(timeStep, id * 43.71))
+            0.35 + 0.30 * glowHash12(vec2(timeStep, id * 17.13)),
+            0.20 + 0.60 * glowHash12(vec2(timeStep, id * 43.71))
         );
 
-        // Stepped size changes per jump
+        // Thin vertical slice proportions
         vec2 boxSize = vec2(
-            0.10 + 0.08 * glowHash12(vec2(timeStep, id * 71.19)),
-            0.06 + 0.06 * glowHash12(vec2(timeStep, id * 91.33))
+            (0.015 + 0.025 * glowHash12(vec2(timeStep, id * 71.19))),
+            (0.12  + 0.150 * glowHash12(vec2(timeStep, id * 91.33)))
         ) * intensity;
 
-        // Check distance inside box
+        // Signed distance to slice
         vec2 localUv = uv - boxCenter;
         float dist = sdBox(localUv, boxSize);
 
         if (dist < 0.0) {
-            // Lens magnification zoom factor
-            float zoomFactor = 1.35 + 0.25 * glowHash12(vec2(timeStep, id));
-            distortedUv = boxCenter + localUv / zoomFactor;
+            // Check if current pixel actually hits the 3D model surface
+            vec3 modelSample = texture2D(tex, uv).rgb;
+            float isModelSurface = step(0.02, length(modelSample));
 
-            // Chromatic separation offset
-            activeChromaticOffset += 0.015 * intensity * (1.0 + 0.4 * id);
+            if (isModelSurface > 0.5) {
+                // Horizontal displacement & magnification along the mesh
+                float zoomFactor = 1.45 + 0.35 * glowHash12(vec2(timeStep, id));
+                float shiftX = (glowHash12(vec2(timeStep, id * 3.0)) - 0.5) * 0.06 * intensity;
+                distortedUv = vec2(boxCenter.x + localUv.x / zoomFactor + shiftX, uv.y);
 
-            // Thin border outline
-            float borderMask = smoothstep(0.0, -0.005, dist) - smoothstep(-0.005, -0.010, dist);
-            borderHighlight += vec3(0.0, 0.9, 1.0) * borderMask * 1.8;
+                // Chromatic channel splitting inside the slice
+                activeChromaticOffset += 0.022 * intensity * (1.0 + 0.3 * id);
+            }
         }
     }
 
-    // Sample texture with Chromatic Aberration (RGB split)
-    vec3 col;
+    // Sample texture with horizontal RGB channel split
     if (activeChromaticOffset > 0.0001) {
-        vec2 dir = normalize(distortedUv - vec2(0.5) + vec2(1e-5));
+        vec2 dir = vec2(1.0, 0.0);
+        vec3 col;
         col.r = texture2D(tex, distortedUv + dir * activeChromaticOffset).r;
         col.g = texture2D(tex, distortedUv).g;
         col.b = texture2D(tex, distortedUv - dir * activeChromaticOffset).b;
-    } else {
-        col = texture2D(tex, distortedUv).rgb;
+        return col;
     }
 
-    return col + borderHighlight;
+    return texture2D(tex, distortedUv).rgb;
 }
 
 // ============================================================================

@@ -109,7 +109,7 @@ async function init() {
             uTime: { value: 0.0 },
             uEnableGlitch: { value: 0.0 },
             uGlitchIntensity: { value: 0.5 },
-            uGraffitiGlow: { value: 2.5 }
+            uGraffitiGlow: { value: .5 }
         },
         vertexShader: pass2VS,
         fragmentShader: pass2FS
