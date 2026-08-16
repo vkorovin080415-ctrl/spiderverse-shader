@@ -149,70 +149,39 @@
             display: none;
         }
 
-        /* Mobile Viewport Optimizations: Horizontal Strip Layout & Fade Logic */
+        /* Mobile Viewport Optimizations (Keeps slow, smooth fade-away ONLY on touch devices) */
         @media (max-width: 600px) {
             #hud-container {
-                /* Transform into top horizontal strip */
+                width: 210px;
+                max-height: 75vh;
                 top: 10px;
                 left: 10px;
-                right: 10px;
-                width: auto;
-                max-height: none;
-                height: 52px;
-                flex-direction: row;
-                overflow-x: auto;
-                overflow-y: hidden;
-                align-items: center;
-                padding: 4px 8px;
-
-                /* Default idle opacity state */
+                padding: 8px;
                 opacity: 0.25;
+                /* Fades out when idle on mobile */
                 background: rgba(13, 8, 20, 0.35);
                 border: 1.5px solid rgba(255, 0, 85, 0.6);
                 box-shadow: 2px 2px 0px rgba(0, 240, 255, 0.4);
-
-                /* Smooth transition for fading */
-                transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                    background 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                /* Slow, butter-smooth 0.8s transition exclusively on mobile */
+                transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    background 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Fades out completely when model is being rotated/interacted with */
-            #hud-container.is-rotating {
-                opacity: 0 !important;
-                pointer-events: none;
-            }
-
-            /* Fades in when user touches/focuses the HUD strip */
             #hud-container:hover,
             #hud-container:focus-within,
             #hud-container:active {
-                opacity: 0.95;
-                background: rgba(13, 8, 20, 0.9);
+                opacity: 0.92;
+                background: rgba(13, 8, 20, 0.88);
                 border-color: #ff0055;
-            }
-
-            /* Remap internal fieldsets for horizontal layout inside the strip */
-            .hud-group {
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                gap: 10px;
-                flex-shrink: 0;
-                height: 80%;
-                padding: 2px 6px;
-            }
-
-            .hud-group legend {
-                display: none;
-                /* Hide legends to save horizontal space on mobile */
+                box-shadow: 2px 2px 0px #00f0ff;
             }
         }
 
         /* Scrollbar Styling */
         #hud-container::-webkit-scrollbar {
             width: 4px;
-            height: 4px;
         }
 
         #hud-container::-webkit-scrollbar-thumb {
@@ -236,7 +205,7 @@
         <fieldset class="hud-group">
             <legend>Model Source</legend>
             <div class="hud-toggle full-width">
-                <label for="glb-file-input" class="file-upload-label">Load .GLB</label>
+                <label for="glb-file-input" class="file-upload-label">Load Custom .GLB / .GLTF</label>
                 <input type="file" id="glb-file-input" accept=".glb,.gltf">
             </div>
         </fieldset>
@@ -271,7 +240,7 @@
             <legend>Impasto Brush</legend>
             <div class="hud-toggle full-width">
                 <input type="checkbox" id="toggle-impasto" checked>
-                <label for="toggle-impasto">Impasto</label>
+                <label for="toggle-impasto">Enable Impasto</label>
             </div>
             <div class="hud-toggle full-width">
                 <label for="slider-brush-scale">Scale</label>
@@ -292,7 +261,7 @@
             <legend>Ben-Day Dots</legend>
             <div class="hud-toggle full-width">
                 <input type="checkbox" id="toggle-benday" checked>
-                <label for="toggle-benday">Ben-Day</label>
+                <label for="toggle-benday">Enable Ben-Day</label>
             </div>
             <div class="hud-toggle full-width">
                 <label for="slider-benday-scale">Dot Scale</label>
@@ -309,10 +278,10 @@
             <legend>Graffiti Tags</legend>
             <div class="hud-toggle full-width">
                 <input type="checkbox" id="toggle-graffiti" checked>
-                <label for="toggle-graffiti">Graffiti</label>
+                <label for="toggle-graffiti">Enable Graffiti</label>
             </div>
             <div class="hud-toggle full-width">
-                <label for="slider-graffiti-scale">Scale</label>
+                <label for="slider-graffiti-scale">Tag Scale</label>
                 <input type="range" id="slider-graffiti-scale" min="1.0" max="10.0" value="4.0" step="0.5">
             </div>
             <div class="hud-toggle full-width">
@@ -320,7 +289,7 @@
                 <input type="range" id="slider-graffiti-threshold" min="0.1" max="1.0" value="0.6" step="0.05">
             </div>
             <div class="hud-toggle full-width">
-                <label for="slider-graffiti-glow">Glow</label>
+                <label for="slider-graffiti-glow">Glow Power</label>
                 <input type="range" id="slider-graffiti-glow" min="0.5" max="5.0" value="2.5" step="0.2">
             </div>
         </fieldset>
@@ -333,12 +302,12 @@
                 <label for="toggle-rimlight">Rim Light</label>
             </div>
             <div class="hud-toggle full-width">
-                <label for="slider-rim-strength">Rim Str</label>
+                <label for="slider-rim-strength">Rim Strength</label>
                 <input type="range" id="slider-rim-strength" min="0.0" max="2.0" value="0.5" step="0.05">
             </div>
             <div class="hud-toggle full-width">
                 <input type="checkbox" id="toggle-glitch">
-                <label for="toggle-glitch">Glitch</label>
+                <label for="toggle-glitch">Enable Glitch</label>
             </div>
         </fieldset>
 
@@ -351,7 +320,7 @@
             </div>
             <div class="hud-toggle full-width">
                 <input type="checkbox" id="toggle-low-poly">
-                <label for="toggle-low-poly">Low-Poly</label>
+                <label for="toggle-low-poly">Low-Poly Facets</label>
             </div>
             <div class="hud-toggle full-width">
                 <label for="slider-facet-steps">Facet Scale</label>
@@ -359,25 +328,12 @@
             </div>
             <div class="hud-toggle full-width">
                 <input type="checkbox" id="toggle-curvature">
-                <label for="toggle-curvature">Curvature</label>
+                <label for="toggle-curvature">Inspect Curvature</label>
             </div>
         </fieldset>
 
     </div>
 
-    <script>
-        // Optional helper snippet to hook up orbit controls or touch events to trigger the fade out on mobile.
-        // In your main.js file where you initialize OrbitControls, you can add:
-        /*
-        const hud = document.getElementById('hud-container');
-        controls.addEventListener('start', () => {
-            if (window.innerWidth <= 600) hud.classList.add('is-rotating');
-        });
-        controls.addEventListener('end', () => {
-            if (window.innerWidth <= 600) hud.classList.remove('is-rotating');
-        });
-        */
-    </script>
     <script type="module" src="main.js"></script>
 </body>
 
